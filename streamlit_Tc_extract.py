@@ -522,7 +522,7 @@ if uploaded_file is not None:
             return Hc2_0 * (1 - Tc/Tc0)
 
         n_channels = 3  # Number of channels to plot
-        fig, axes = plt.subplots(1, n_channels, figsize=(18, 5), sharey=False, dpi=1800)
+        fig, axes = plt.subplots(1, n_channels, figsize=(18, 5), sharey=False, dpi=300)
         
         for i, channel in enumerate(channels[:n_channels]):
             ax = axes[i]
