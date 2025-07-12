@@ -1,6 +1,5 @@
 pandas
 plotly
-math
 scipy
 numpy
 matplotlib
