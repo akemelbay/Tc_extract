@@ -3,6 +3,4 @@ plotly
 scipy
 numpy
 matplotlib
-sys
-os
 streamlit
