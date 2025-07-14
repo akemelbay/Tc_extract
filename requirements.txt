@@ -4,3 +4,4 @@ scipy
 numpy
 matplotlib
 streamlit
+streamlit_plotly_events
