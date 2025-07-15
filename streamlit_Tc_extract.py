@@ -21,7 +21,7 @@ import streamlit as st
 
 import re
 
-from streamlit_plotly_events import plotly_events
+#from streamlit_plotly_events import plotly_events
 
 st.set_page_config(layout="wide")
 st.title("PPMS Data Plotter & Analyzer")
@@ -42,6 +42,7 @@ def roundMagField(value):
 def boltzmann_sigmoid(T, R_low, R_high, Tc, delta_T):
     return R_low + (R_high - R_low) * expit((T - Tc) / delta_T)
 
+
 def refine_transition_fit(df, channel, temp_col='Temperature (K)', delta_range=delta_range):
     data = df[[temp_col, channel]].dropna()
     T = data[temp_col].values
@@ -55,7 +56,9 @@ def refine_transition_fit(df, channel, temp_col='Temperature (K)', delta_range=d
     Tc_guess = T[np.argmin(np.abs(R - (R_high_guess + R_low_guess)/2))]
     delta_T_guess = delta_range
     p0_initial = [R_low_guess, R_high_guess, Tc_guess, delta_T_guess]
-
+    
+    
+        
     try:
         popt_initial, _ = curve_fit(boltzmann_sigmoid, T, R, p0=p0_initial)
         Tc_initial = popt_initial[2]
@@ -71,10 +74,11 @@ def refine_transition_fit(df, channel, temp_col='Temperature (K)', delta_range=d
 
         if len(T_refine) < 5:
             return None
-
+        
+        
         R_low_refine_guess = np.min(R_refine)
         R_high_refine_guess = np.max(R_refine)
-        delta_T_refine_guess = 0.5
+        delta_T_refine_guess = delta_range
         p0_refine = [R_low_refine_guess, R_high_refine_guess, Tc_initial, delta_T_refine_guess]
 
         popt_refine, pcov_refine = curve_fit(boltzmann_sigmoid, T_refine, R_refine, p0=p0_refine)
@@ -105,7 +109,9 @@ def refine_transition_fit(df, channel, temp_col='Temperature (K)', delta_range=d
             'Tc_err': Tc_err,
             'delta_T_err': delta_T_err
         }
-    except RuntimeError:
+        
+    except RuntimeError as e:
+        st.write(f"curve_fit failed: {e}")
         return None
 
  # Shared styles
@@ -340,15 +346,41 @@ if uploaded_file is not None:
     st.markdown("""
         <style>
         div[data-testid="stNumberInputContainer"] {
-            width: 120px;
+            width: 150px;
         }
         </style>
     """, unsafe_allow_html=True)
     
     with st.form("analysis_form"):
-        st.subheader("Analyze data")
-        delta_range = st.number_input("Transition window to fit &plusmn; (K)", min_value=0.0, max_value=10.0, value=2.0, step=0.5, format="%.2f")
+        st.header("Analyze data")
+            
+        delta_range = st.number_input(
+            "Transition window to fit ± (K)",
+            min_value=0.0,
+            max_value=10.0,
+            value=2.0,
+            step=0.5,
+            format="%.2f"
+        )
+        frac_change_input = st.number_input(
+            "Min. fractional resistance change",
+            min_value=0.0,
+            max_value=1.5,
+            value=0.9,
+            step=0.1,
+            format="%.2f"
+        )
+        R2_requirement_input = st.number_input(
+            "R2 requirement",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.99,
+            step=0.001,
+            format="%.3f"
+        )
+    
         submitted = st.form_submit_button("Analyze")
+        
         if submitted:
             
             # 1. Filter for T < 20 K
@@ -400,7 +432,7 @@ if uploaded_file is not None:
                     R_refine = params['R_refine']
                     R2 = params['R2']
                     frac_change = params['frac_change']
-    
+                    
                     # Assign color by sweep direction
                     if sweep_dir == 'cooling':
                         color = 'blue'
@@ -413,11 +445,12 @@ if uploaded_file is not None:
                     data_min = R_refine.min()
                     data_max = R_refine.max()
                     fit_range = np.abs(R_high - R_low)
+                    #Check whether fit plateaued, ensuring that measured data actually covers both ends of the transition
                     within_low = np.abs(data_min - R_low) < 0.05 * fit_range
-                    within_high = np.abs(data_max - R_high) < 0.05 * fit_range
+                    within_high = np.abs(data_max - R_high) < 0.1 * fit_range
                     
                     # Plot fit only if R2>=0.9, frac_change>=0.9, and data covers both plateaus
-                    plot_fit = (R2 >= 0.9) and (frac_change >= 0.9) and within_low and within_high
+                    plot_fit = (R2 >= R2_requirement_input) and (frac_change >= frac_change_input) and within_low and within_high
     
                     # Data points (used for fit)
                     fig.add_trace(go.Scatter(
@@ -439,6 +472,8 @@ if uploaded_file is not None:
                             line=dict(color=color, width=3, dash=line_dash),
                             name=f'{field/10000:.2f} T {sweep_dir} fit (Tc={Tc:.3f}K, R²={R2:.3f})'
                         ))
+
+                    
     
                 fig.update_layout(
                     title=f'<b>{channel}</b> ({channel_list_from_fileName[idx]})',
@@ -451,6 +486,10 @@ if uploaded_file is not None:
                 fig.update_xaxes(xaxis_style)
                 fig.update_yaxes(yaxis_style)
                 st.plotly_chart(fig, use_container_width=True)
+
+            
+
+                
     
             # 7. Print summary
             summary_dfs = {}
@@ -462,7 +501,7 @@ if uploaded_file is not None:
                         'Sweep': sweep_dir,
                         'Tc': params['Tc'],
                         'Tc_err': params.get('Tc_err', np.nan),
-                        'transition_width': params['delta_T'],
+                        'transition_width': params['delta_T']*4.394,
                         'transition_width_err': params.get('delta_T_err', np.nan),
                         'R2': params['R2'],
                         'frac_change': params['frac_change'],
@@ -479,9 +518,10 @@ if uploaded_file is not None:
                 
                 # Data coverage filter
                 fit_range = np.abs(summary_df['R_high'] - summary_df['R_low'])
+                #Check whether fit plateaued, ensuring that measured data actually covers both ends of the transition
                 within_low = np.abs(summary_df['data_min'] - summary_df['R_low']) < 0.05 * fit_range
-                within_high = np.abs(summary_df['data_max'] - summary_df['R_high']) < 0.05 * fit_range
-                mask = (summary_df['R2'] >= 0.8) & (summary_df['frac_change'] >= 0.9) & within_low & within_high
+                within_high = np.abs(summary_df['data_max'] - summary_df['R_high']) < 0.1 * fit_range
+                mask = (summary_df['R2'] >= R2_requirement_input) & (summary_df['frac_change'] >= frac_change_input) & within_low & within_high
                 summary_df = summary_df[mask].copy()
                 
     
@@ -501,11 +541,26 @@ if uploaded_file is not None:
                         summary_df.loc[mask_cooling, 'hysteresis_err'] = hysteresis_err
                         summary_df.loc[mask_warming, 'hysteresis_err'] = hysteresis_err
                 summary_dfs[channel] = summary_df
-                with st.expander(f"Summary for {channel} ({channel_list_from_fileName[idx]})"):
+                with st.expander(f"Summary for {channel} ({channel_list_from_fileName[idx]})",icon=":material/table_view:"):
                     st.dataframe(summary_df)
-
+                
             st.session_state['summary_dfs'] = summary_dfs
             st.session_state['channels'] = channels
+
+            #Print XY data
+            with st.expander("XY Data per sweep",icon=":material/backup_table:"):  # Main expander per channel
+                 for idx, channel in enumerate(channels):
+                    with st.expander(f"Data for {channel} ({channel_list_from_fileName[idx]})",icon=":material/chart_data:"):  # Main expander per channel
+                        for (field, sweep_dir), params in results[channel].items():
+                            T_refine = params['T_refine']
+                            R_refine = params['R_refine']
+                
+                            with st.expander(f"Field: {field} Oe, sweep: {sweep_dir}",icon=":material/line_start:"):  # Sub-expander for each sweep
+                                df_xydata = pd.DataFrame({
+                                    'Temperature, K': T_refine,
+                                    'Resistance, Ohm': R_refine
+                                })
+                                st.dataframe(df_xydata,hide_index=True,selection_mode="multi-column")
     
                 
     
@@ -514,9 +569,6 @@ if uploaded_file is not None:
     if 'summary_dfs' in st.session_state:
         summary_dfs = st.session_state['summary_dfs']
         channels = st.session_state['channels']
-
-        
-
     
         
         # Define the model: H(Tc) = Hc2_0 * (1 - Tc/Tc0)
@@ -529,9 +581,10 @@ if uploaded_file is not None:
             # Prepare summary df as before
             df_summary = summary_dfs[channel].copy()
             df_summary['Field (T)'] = df_summary['Field'] / 10000
-            df_summary = df_summary[(df_summary['frac_change'] > 0.9) & (df_summary['Sweep'] == 'cooling')]
+            df_summary = df_summary[(df_summary['frac_change'] > frac_change_input) & (df_summary['Sweep'] == 'cooling')]
+            
         
-            df_hyst = df_summary[(df_summary['Sweep'] == 'cooling') & (df_summary['frac_change'] > 0.9)].copy()
+            df_hyst = df_summary[(df_summary['Sweep'] == 'cooling') & (df_summary['frac_change'] > frac_change_input)].copy()
             df_hyst['abs_hysteresis'] = np.abs(pd.to_numeric(df_hyst['hysteresis'], errors='coerce'))
             df_hyst['abs_hysteresis_err'] = pd.to_numeric(df_hyst['hysteresis_err'], errors='coerce')
         
@@ -542,15 +595,14 @@ if uploaded_file is not None:
             )
         
             colors = {'cooling': 'blue', 'warming': 'red'}
-        
+            
             # 1. Tc vs Field (and fits)
             for sweep in df_summary['Sweep'].unique():
                 mask = df_summary['Sweep'] == sweep
-                x = df_summary.loc[mask, 'Tc'].values
+                x = df_summary.loc[mask, 'Tc'].round(3).values
                 y = df_summary.loc[mask, 'Field (T)'].values
-                xerr = df_summary.loc[mask, 'Tc_err'].values
+                xerr = df_summary.loc[mask, 'Tc_err'].round(3).values
                 yerr = None # If you have field errors, put here
-        
                 # Scatter points
                 figAnalysis.add_trace(
                     go.Scatter(
@@ -635,7 +687,7 @@ if uploaded_file is not None:
                 figAnalysis.add_trace(
                     go.Scatter(
                         x=df_summary.loc[mask, 'Field (T)'],
-                        y=df_summary.loc[mask, 'transition_width']*4.394,
+                        y=df_summary.loc[mask, 'transition_width'],
                         error_y=dict(type='data', array=df_summary.loc[mask, 'transition_width_err']),
                         mode='markers',
                         name=f"Width {sweep}",
@@ -674,10 +726,10 @@ if uploaded_file is not None:
             for annotation in figAnalysis['layout']['annotations']:
                 annotation['y'] += 0.04
         
-            figAnalysis.update_xaxes(title_text="Field (T)", row=1, col=1)
-            figAnalysis.update_xaxes(title_text="Field (T)", row=1, col=2)
-            figAnalysis.update_xaxes(title_text="Field (T)", row=1, col=3)
-            figAnalysis.update_yaxes(title_text="Tc (K)", row=1, col=1)
+            figAnalysis.update_xaxes(title_text="Tc (K)", row=1, col=1)
+            figAnalysis.update_xaxes(title_text="Tc (K)", row=1, col=2)
+            figAnalysis.update_xaxes(title_text="Tc (K)", row=1, col=3)
+            figAnalysis.update_yaxes(title_text="Field (T)", row=1, col=1)
             figAnalysis.update_yaxes(title_text="Transition width (K)", row=1, col=2)
             figAnalysis.update_yaxes(title_text="Hysteresis (K)", row=1, col=3)
         
@@ -689,5 +741,6 @@ if uploaded_file is not None:
             )
             
             st.plotly_chart(figAnalysis, use_container_width=True)
-            st.write(f'GL fit: Hc2(0) = {Hc2_0_fit:.2f} T, xi(0) = {xi_0_GL:.1f} nm, R² = {r2_GL:.3f}')
-            st.write(f'Quad fit: Hc2(0) = {Hc2_0_quad:.2f} T, xi(0) = {xi_0_quad:.1f} nm, R² = {r2_quad:.3f}')
+            if not df_summary.empty:
+                st.write(f'GL fit: Hc2(0) = {Hc2_0_fit:.2f} T, xi(0) = {xi_0_GL:.1f} nm, R² = {r2_GL:.3f}')
+                st.write(f'Quad fit: Hc2(0) = {Hc2_0_quad:.2f} T, xi(0) = {xi_0_quad:.1f} nm, R² = {r2_quad:.3f}')
