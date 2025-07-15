@@ -43,11 +43,14 @@ def boltzmann_sigmoid(T, R_low, R_high, Tc, delta_T):
     return R_low + (R_high - R_low) * expit((T - Tc) / delta_T)
 
 
-def refine_transition_fit(df, channel, temp_col='Temperature (K)', delta_range=delta_range):
+def refine_transition_fit(df, channel, sweep_dir, field, temp_col='Temperature (K)', delta_range=delta_range, ):
     data = df[[temp_col, channel]].dropna()
     T = data[temp_col].values
     R = data[channel].values
 
+    field = field
+    sweep_dir = sweep_dir
+    
     if len(T) < 8:
         return None
 
@@ -111,7 +114,7 @@ def refine_transition_fit(df, channel, temp_col='Temperature (K)', delta_range=d
         }
         
     except RuntimeError as e:
-        st.write(f"curve_fit failed: {e}")
+        st.write(f"curve_fit failed for {channel}, {field} Oe, {sweep_dir}: {e}")
         return None
 
  # Shared styles
@@ -412,7 +415,7 @@ if uploaded_file is not None:
                     for sweep_dir in ['cooling', 'warming']:
                         sel = (df['Rounded Field (Oe)'] == field) & (df['Sweep'] == sweep_dir)
                         sweep_df = df[sel]
-                        result = refine_transition_fit(sweep_df, channel, temp_col='Temperature (K)', delta_range=delta_range)
+                        result = refine_transition_fit(sweep_df, channel, sweep_dir, field, temp_col='Temperature (K)', delta_range=delta_range)
                         if result:
                             results[channel][(field, sweep_dir)] = result
             
