@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 
 import sys
 import os
+import base64
+import random
 
 import streamlit as st
 
@@ -24,7 +26,51 @@ import re
 #from streamlit_plotly_events import plotly_events
 
 st.set_page_config(layout="wide")
-st.title("PPMS Data Plotter & Analyzer")
+
+#Hide Streamlit top bar
+hide_streamlit_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stMain .block-container {padding-top: 2rem ! important}
+    </style>
+    """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+# Read and encode the image
+with open("quantum_duck.png", "rb") as image_file:
+    encoded = base64.b64encode(image_file.read()).decode()
+# Generate random filter values
+invert = round(random.uniform(0, 1), 2)  # 0% to 100%
+sepia = round(random.uniform(0, 1), 2)
+saturate = random.randint(100, 5000)    # 100% to 5000%
+hue_rotate = random.randint(0, 360)     # 0deg to 360deg
+brightness = round(random.uniform(0.5, 1.5), 2)  # 50% to 150%
+contrast = random.randint(50, 150)      # 50% to 150%
+
+filter_str = (
+    f"invert({int(invert*100)}%) "
+    f"sepia({int(sepia*100)}%) "
+    f"saturate({saturate}%) "
+    f"hue-rotate({hue_rotate}deg) "
+    f"brightness({int(brightness*100)}%) "
+    f"contrast({contrast}%)"
+)
+
+# Display with random filter
+st.markdown(
+    f"""
+    <div style="display: flex; align-items: center;">
+        <img src="data:image/png;base64,{encoded}" width="70" 
+         style="margin-right: 20px; filter: {filter_str};">
+        <span style="font-size: 40px; font-weight: bold;">PPMS Data Plotting & Analysis</span>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+#st.title("PPMS Data Plotter & Analyzer")
 
 # ---- PARAMETERS ----
 window_length = 11 #savgol window to smoothen T for sweep direction identification
@@ -114,8 +160,9 @@ def refine_transition_fit(df, channel, sweep_dir, field, temp_col='Temperature (
         }
         
     except RuntimeError as e:
-        st.write(f"curve_fit failed for {channel}, {field} Oe, {sweep_dir}: {e}")
-        return None
+        #st.write(f"curve_fit failed for {channel}, {field} Oe, {sweep_dir}: {e}")
+        # Return error message instead of writing to Streamlit
+        return {'error': f"curve_fit failed for {channel}, {field} Oe, {sweep_dir}: {e}"}
 
  # Shared styles
 font_dict=dict(family='Arial',
@@ -210,15 +257,15 @@ def plot_data_vs_time(df,channel_list_from_fileName):
     )
 
     
-    figTime.update_xaxes(showticklabels=False, nticks=10, showline=True, linecolor='black', linewidth=1, mirror=True, ticks='inside', spikemode='across+toaxis', spikedash='solid', spikecolor='gray', spikethickness=1)
+    figTime.update_xaxes(showticklabels=False, nticks=10, showline=True, linecolor='black', linewidth=1, mirror=True, ticks='inside', spikemode='across+toaxis', spikedash='solid', spikecolor='gray', spikethickness=1,tickformat="%H:%M:%S")
     figTime.update_yaxes(showline=True, linecolor='black', linewidth=1, mirror=True, ticks='inside')
-    figTime.update_xaxes(showticklabels=True, row=5, col=1)
+    figTime.update_xaxes(showticklabels=True, title_text="Time", row=5, col=1)
     #figTime.update_traces(hovertemplate="%{y}", name="")
     figTime.update_yaxes(title_text="Temperature (K)", row=1, col=1)
     figTime.update_yaxes(title_text="Field (T)", row=2, col=1)
-    figTime.update_yaxes(title_text="Ch1 R (Ohm)", row=3, col=1)
-    figTime.update_yaxes(title_text="Ch2 R (Ohm)", row=4, col=1)
-    figTime.update_yaxes(title_text="Ch3 R (Ohm)", row=5, col=1)
+    figTime.update_yaxes(title_text="Ch1 R (Ω)", row=3, col=1)
+    figTime.update_yaxes(title_text="Ch2 R (Ω)", row=4, col=1)
+    figTime.update_yaxes(title_text="Ch3 R (Ω)", row=5, col=1)
 
     # Apply to all subplots (assuming 1 col, 5 rows)
     for row in range(1, 6):
@@ -271,12 +318,12 @@ def plot_data_vs_temperature(df,channel_list_from_fileName):
         ]
     )
     figTemp.update_xaxes(showticklabels=False, spikemode='across+toaxis', spikedash='solid', spikecolor='gray', spikethickness=1)
-    figTemp.update_xaxes(showticklabels=True, row=3, col=1)
+    figTemp.update_xaxes(showticklabels=True, title_text="Temperature (K)", row=3, col=1)
     #figTemp.update_traces(hovertemplate="%{x} K", name="", mode="lines")
 
-    figTemp.update_yaxes(title_text="Ch1 R (Ohm)", row=1, col=1)
-    figTemp.update_yaxes(title_text="Ch2 R (Ohm)", row=2, col=1)
-    figTemp.update_yaxes(title_text="Ch3 R (Ohm)", row=3, col=1)
+    figTemp.update_yaxes(title_text="Ch1 R (Ω)", row=1, col=1)
+    figTemp.update_yaxes(title_text="Ch2 R (Ω)", row=2, col=1)
+    figTemp.update_yaxes(title_text="Ch3 R (Ω)", row=3, col=1)
     
     for row in range(1, 4):
         figTemp.update_xaxes(row=row, col=1, **xaxis_style)
@@ -310,7 +357,15 @@ def channel_info_to_list(channel_dict, n_channels=3):
         if 1 <= num <= n_channels:
             ch_list[num-1] = info
     return ch_list
-    
+
+def sci_not(val, precision=2):
+    """Returns a string in scientific notation for LaTeX."""
+    if val == 0:
+        return f"{0:.{precision}f}"
+    exp = int(np.floor(np.log10(abs(val))))
+    coeff = val / 10**exp
+    return f"{coeff:.{precision}f}\\times 10^{{{exp}}}"
+
 if uploaded_file is not None:
 
     filename = uploaded_file.name
@@ -346,13 +401,6 @@ if uploaded_file is not None:
 
     process_and_plot(df,channel_list_from_fileName)
 
-    st.markdown("""
-        <style>
-        div[data-testid="stNumberInputContainer"] {
-            width: 150px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
     
     with st.form("analysis_form"):
         st.header("Analyze data")
@@ -409,7 +457,9 @@ if uploaded_file is not None:
             channels = ['Channel 1 Resistance', 'Channel 2 Resistance', 'Channel 3 Resistance']
             fields = sorted(df['Rounded Field (Oe)'].unique())
             results = {channel: {} for channel in channels}
-    
+
+            #Prepare for any error messages to receive from refine_transition_fit()
+            error_messages = []
             for channel in channels:
                 for field in fields:
                     for sweep_dir in ['cooling', 'warming']:
@@ -417,9 +467,16 @@ if uploaded_file is not None:
                         sweep_df = df[sel]
                         result = refine_transition_fit(sweep_df, channel, sweep_dir, field, temp_col='Temperature (K)', delta_range=delta_range)
                         if result:
-                            results[channel][(field, sweep_dir)] = result
+                            if 'error' in result:
+                                error_messages.append(result['error'])
+                            else:
+                                results[channel][(field, sweep_dir)] = result
             
             channels = [ch for ch in channels if len(results[ch]) > 0]
+            if error_messages:
+                with st.expander(":orange[Fitting errors]",icon=":material/error:"):
+                    for msg in error_messages:
+                        st.write(msg)
 
 
            
@@ -745,5 +802,103 @@ if uploaded_file is not None:
             
             st.plotly_chart(figAnalysis, use_container_width=True)
             if not df_summary.empty:
-                st.write(f'GL fit: Hc2(0) = {Hc2_0_fit:.2f} T, xi(0) = {xi_0_GL:.1f} nm, R² = {r2_GL:.3f}')
-                st.write(f'Quad fit: Hc2(0) = {Hc2_0_quad:.2f} T, xi(0) = {xi_0_quad:.1f} nm, R² = {r2_quad:.3f}')
+                # --- FIT SUMMARY: Hc2(0) and xi(0) ---
+                #st.write("**Ginzburg-Landau (GL) fit:**")
+                st.latex(
+                    f"\\textbf{{Ginzburg-Landau (GL) fit: }} H_{{c2}}(0) = {Hc2_0_fit:.2f}\\,\\text{{T}},\\quad "
+                    f"\\xi(0) = {xi_0_GL:.1f}\\,\\text{{nm}},\\quad "
+                    f"R^2 = {r2_GL:.3f}"
+                )
+                #st.markdown("**Quadratic fit:**")
+                st.latex(
+                    f"\\textbf{{Quadratic fit: }} H_{{c2}}(0) = {Hc2_0_quad:.2f}\\,\\text{{T}},\\quad "
+                    f"\\xi(0) = {xi_0_quad:.1f}\\,\\text{{nm}},\\quad "
+                    f"R^2 = {r2_quad:.3f}"
+                )
+                # --- SUPERCONDUCTING GAP ---
+                if not df_summary[df_summary['Field'] == 0].empty:
+                    hbar = 1.055e-34  # J·s
+                    kB_eV = 8.617e-5  # eV/K
+                    mu_0 = 1.25663706e-6  # H/m
+            
+                    Tc_0_field = df_summary.loc[df_summary['Field'] == 0, 'Tc'].values[0]
+                    gap_0T = 1.76 * Tc_0_field * kB_eV  # eV
+                    gap_0T_J = gap_0T * 1.602e-19  # J
+            
+                    #st.markdown("**Superconducting gap at 0 T:**")
+                    st.latex(
+                        f"\\textbf{{Superconducting gap at 0 T: }} \\Delta(0) = {gap_0T*1e3:.2f}\\,\\text{{meV}}"
+                    )
+                    # --- KINETIC INDUCTANCE ---
+                    R_high = df_summary.loc[df_summary['Field'] == 0, 'R_high'].values[0]
+                    R_sq = 4.532 * R_high
+                    Lk = hbar * R_sq / (np.pi * gap_0T_J)  # H/sq
+                    Lk_pH_sq = Lk * 1e12  # pH/sq
+            
+                    #st.markdown("**Kinetic inductance per square:**")
+                    st.latex(
+                        f"\\textbf{{Kinetic inductance: }} L_k = {Lk_pH_sq:.2f}\\,\\text{{pH}}/\\square"
+                        f" \\quad (R_{{\\text{{high}}}}^{{\\text{{fit}}}} = {R_high:.2f}\\,\\Omega,\\;"
+                        f"R_{{\\square}} = {R_sq:.2f}\\,\\Omega/\\square)"
+                    )
+            
+                    # --- PENETRATION DEPTH ---
+                    t_nm = st.number_input("Enter film thickness in nm:", min_value=0, value=200, step = 10, key=f"thickness_{channel}")
+                    t_m = t_nm * 1e-9
+                    if st.button("Calculate penetration depth", key=f"penetration_btn_{channel}"):
+                        lambda_m = np.sqrt(Lk * t_m / mu_0)
+                        lambda_nm = lambda_m * 1e9
+                        #st.markdown("**London penetration depth:**")
+                        st.latex(
+                            f"\\textbf{{London penetration depth: }} \\lambda = {lambda_nm:.1f}\\,\\text{{nm}}"
+                        )
+            
+                    # --- DERIVATION/FORMULAS COLLAPSIBLE ---
+                    with st.expander("Show derivations and formulas"):
+                        st.latex(r"H_{c2}(0) = \text{GL fit parameter (extrapolated upper critical field at } T=0\text{)}")
+                        st.latex(r"\xi(0) = \sqrt{\frac{\Phi_0}{2\pi H_{c2}(0)}}")
+                        st.latex(r"\Delta(0) = 1.76\,k_B T_c")
+                        st.latex(r"L_k = \frac{\hbar R_{\square}}{\pi \Delta(0)}")
+                        st.latex(r"\lambda = \sqrt{\frac{L_{\square}\, t}{\mu_0}}")
+                        # If you want, you can also add a line with the numeric substitutions here
+                        st.latex(
+                            f"\\Delta(0) = 1.76 \\times {Tc_0_field:.2f}\\,\\text{{K}} "
+                            f"\\times {kB_eV:.5f}\\,\\text{{eV/K}} = {gap_0T*1e3:.2f}\\,\\text{{meV}}"
+                        )
+                        st.latex(
+                            f"L_k = \\frac{{{sci_not(hbar)}\\,\\text{{J}}\\cdot\\text{{s}} \\times {R_sq:.2f}\\,\\Omega}}"
+                            f"{{\\pi \\times {sci_not(gap_0T_J)}\\,\\text{{J}}}} = {Lk_pH_sq:.2f}\\,\\text{{pH}}/\\square"
+                        )
+                        if 'lambda_nm' in locals():
+                            st.latex(
+                                f"\\lambda = \\sqrt{{\\frac{{{sci_not(Lk)}\\,\\text{{H}}/\\square \\times {t_nm:.1f}\\,\\text{{nm}}}}"
+                                f"{{{sci_not(mu_0)}\\,\\text{{H/m}}}}}} = {lambda_nm:.1f}\\,\\text{{nm}}"
+                            )
+                else:
+                    Tc_0_field = None  # or np.nan, or raise an error, etc.
+
+                #st.dataframe(df_summary)
+# Inject custom CSS to left-align KaTeX
+st.markdown("""
+    <style>
+    .katex-display {
+        text-align: left !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+# Inject custom CSS to set input width
+st.markdown("""
+        <style>
+        div[data-testid="stNumberInputContainer"] {
+            width: 150px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+# Inject custom CSS to set Error icon color to orange
+st.markdown("""
+    <style>
+    [data-testid="stExpanderIconError"] {
+        color: rgb(217, 90, 0) !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
