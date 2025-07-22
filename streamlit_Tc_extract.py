@@ -39,7 +39,7 @@ hide_streamlit_style = """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Read and encode the image
-with open("quantum_duck.png", "rb") as image_file:
+with open("qunatum_turkey.png", "rb") as image_file:
     encoded = base64.b64encode(image_file.read()).decode()
 # Generate random filter values
 invert = round(random.uniform(0, 1), 2)  # 0% to 100%
