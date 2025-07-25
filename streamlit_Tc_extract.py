@@ -38,32 +38,35 @@ hide_streamlit_style = """
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-def get_email():
-    # Try the new Streamlit context API (Streamlit >= 1.32)
-    try:
-        headers = st.context.headers
-        email = headers.get("X-Auth-Request-Email")
-        if email:
-            return email
-    except Exception:
-        pass
+# Get the email of authentificated user
+# def get_email():
+#     # Try the new Streamlit context API (Streamlit >= 1.32)
+#     try:
+#         headers = st.context.headers
+#         email = headers.get("X-Auth-Request-Email")
+#         if email:
+#             return email
+#     except Exception:
+#         pass
 
-    # Fallback: try environment variable (for some deployments)
-    import os
-    email = os.environ.get("HTTP_X_AUTH_REQUEST_EMAIL")
-    if email:
-        return email
+#     # Fallback: try environment variable (for some deployments)
+#     import os
+#     email = os.environ.get("HTTP_X_AUTH_REQUEST_EMAIL")
+#     if email:
+#         return email
 
-    # If not found, return None
-    return None
+#     # If not found, return None
+#     return None
 
-email = get_email()
-if email:
-    st.success(f"Logged in as {email}")
-else:
-    st.warning("Anonymous user")
+# email = get_email()
+# if email:
+#     st.success(f"Logged in as {email}")
+# else:
+#     st.warning("Anonymous user")
+#
+# For debugging:
+#st.write(st.context.headers)
 
-st.write(st.context.headers)
 
 # Read and encode the image
 with open("qunatum_turkey.png", "rb") as image_file:
