@@ -25,7 +25,7 @@ import re
 
 #from streamlit_plotly_events import plotly_events
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide",page_title="PPMS Data Plotting & Analysis")
 
 #Hide Streamlit top bar
 hide_streamlit_style = """
@@ -69,8 +69,8 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 
 # Read and encode the image
-with open("qunatum_turkey.png", "rb") as image_file:
-    encoded = base64.b64encode(image_file.read()).decode()
+#with open("qunatum_turkey.png", "rb") as image_file:
+#    encoded = base64.b64encode(image_file.read()).decode()
 # Generate random filter values
 invert = round(random.uniform(0, 1), 2)  # 0% to 100%
 sepia = round(random.uniform(0, 1), 2)
@@ -92,7 +92,7 @@ filter_str = (
 st.markdown(
     f"""
     <div style="display: flex; align-items: center;">
-        <img src="data:image/png;base64,{encoded}" width="70" 
+        <img src="https://qcmf.app/quantum_turkey.png" width="70" 
          style="margin-right: 20px; filter: {filter_str};">
         <span style="font-size: 40px; font-weight: bold;">PPMS Data Plotting & Analysis</span>
     </div>
