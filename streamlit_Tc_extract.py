@@ -38,6 +38,35 @@ hide_streamlit_style = """
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
+
+def get_email():
+    # Try Streamlit's websocket headers (for Streamlit >=1.17)
+    try:
+        from streamlit.web.server.websocket_headers import _get_websocket_headers
+        headers = _get_websocket_headers()
+        email = headers.get("X-Auth-Request-Email")
+        if email:
+            return email
+    except Exception:
+        pass
+
+    # Fallback: try environment variable (for some deployments)
+    import os
+    email = os.environ.get("HTTP_X_AUTH_REQUEST_EMAIL")
+    if email:
+        return email
+
+    # If not found, return None
+    return None
+
+email = get_email()
+if email:
+    st.success(f"Your email: {email}")
+else:
+    st.warning("No email address received. Are you logged in through oauth2-proxy?")
+
+
+
 # Read and encode the image
 with open("qunatum_turkey.png", "rb") as image_file:
     encoded = base64.b64encode(image_file.read()).decode()
