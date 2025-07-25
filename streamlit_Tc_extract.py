@@ -63,7 +63,7 @@ if email:
 else:
     st.warning("Anonymous user")
 
-
+st.write(st.context.headers)
 
 # Read and encode the image
 with open("qunatum_turkey.png", "rb") as image_file:
