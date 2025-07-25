@@ -38,12 +38,10 @@ hide_streamlit_style = """
     """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-
 def get_email():
-    # Try Streamlit's websocket headers (for Streamlit >=1.17)
+    # Try the new Streamlit context API (Streamlit >= 1.32)
     try:
-        from streamlit.web.server.websocket_headers import _get_websocket_headers
-        headers = _get_websocket_headers()
+        headers = st.context.headers
         email = headers.get("X-Auth-Request-Email")
         if email:
             return email
@@ -61,9 +59,9 @@ def get_email():
 
 email = get_email()
 if email:
-    st.success(f"{email}")
+    st.success(f"Logged in as {email}")
 else:
-    st.warning("No email address received.")
+    st.warning("Anonymous user")
 
 
 
