@@ -61,9 +61,9 @@ def get_email():
 
 email = get_email()
 if email:
-    st.success(f"Your email: {email}")
+    st.success(f"{email}")
 else:
-    st.warning("No email address received. Are you logged in through oauth2-proxy?")
+    st.warning("No email address received.")
 
 
 
