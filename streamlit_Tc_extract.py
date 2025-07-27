@@ -90,8 +90,8 @@ filter_str = (
 st.markdown(
     f"""
     <div style="display: flex; align-items: center;">
-        <img src="https://qcmf.app/quantum_turkey.png" width="70" 
-         style="margin-right: 20px; filter: {filter_str};">
+         <a href="https://qcmf.app"><img src="https://qcmf.app/quantum_turkey.png" width="70" 
+         style="margin-right: 20px; filter: {filter_str};"></a>
         <span style="font-size: 40px; font-weight: bold;">PPMS Data Plotting & Analysis</span>
     </div>
     """,
