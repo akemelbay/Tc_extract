@@ -105,11 +105,13 @@ window_length = 11 #savgol window to smoothen T for sweep direction identificati
 polyorder = 2 #savgol polyorder to smoothen T for sweep direction identification
 delta_range = 1.5 #Tc range in [K] to fit transitions with sigmoid
 
+
+
 # ---- FUNCTIONS (same as before, omitted here for brevity) ----
 def roundMagField(value):
     minField = 0
     maxField = 15e4
-    increment = 1e4
+    increment = Field_sweep_input
     closest_value = min(np.arange(minField, maxField+increment, increment), key=lambda x: abs(x - value))
     return closest_value
 
@@ -455,7 +457,15 @@ if uploaded_file is not None:
             max_value=1.0,
             value=0.99,
             step=0.001,
-            format="%.3f"
+            format="%.f"
+        )
+        Field_sweep_input = st.number_input(
+            "Magnetic field increment (Oe)",
+            min_value=0.0,
+            max_value=1e5,
+            value=1e4,
+            step=1e3,
+            format="%.0f"
         )
     
         submitted = st.form_submit_button("Analyze")
