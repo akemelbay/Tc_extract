@@ -825,11 +825,11 @@ if uploaded_file is not None:
                 annotation['y'] += 0.04
         
             figAnalysis.update_xaxes(title_text="Tc (K)", row=1, col=1)
-            figAnalysis.update_xaxes(title_text="Tc (K)", row=1, col=2)
-            figAnalysis.update_xaxes(title_text="Tc (K)", row=1, col=3)
+            figAnalysis.update_xaxes(title_text="Field (T)", row=1, col=2)
+            figAnalysis.update_xaxes(title_text="Field (T)", row=1, col=3)
             figAnalysis.update_yaxes(title_text="Field (T)", row=1, col=1)
             figAnalysis.update_yaxes(title_text="Transition width (K)", row=1, col=2)
-            figAnalysis.update_yaxes(title_text="Hysteresis (K)", row=1, col=3)
+            figAnalysis.update_yaxes(title_text="Tc Hysteresis (K)", row=1, col=3)
         
             figAnalysis.update_layout(
                 title_text=f"<b>{channel}</b> ({channel_list_from_fileName[idx]})",
