@@ -904,9 +904,10 @@ if uploaded_file is not None:
                             f"\\times {kB_eV:.5f}\\,\\text{{eV/K}} = {gap_0T*1e3:.2f}\\,\\text{{meV}}"
                         )
                         st.latex(
-                            f"L_k = \\frac{{{sci_not(hbar)}\\,\\text{{J}}\\cdot\\text{{s}} \\times {R_sq:.2f}\\,\\Omega}}"
+                            f"L_k = \\frac{{{sci_not(hbar)}\\,\\text{{J}}\\cdot\\text{{s}} \\times {R_sq:.2f}\\,\\Omega/\\square}}"
                             f"{{\\pi \\times {sci_not(gap_0T_J)}\\,\\text{{J}}}} = {Lk_pH_sq:.2f}\\,\\text{{pH}}/\\square"
                         )
+
                         if 'lambda_nm' in locals():
                             st.latex(
                                 f"\\lambda = \\sqrt{{\\frac{{{sci_not(Lk)}\\,\\text{{H}}/\\square \\times {t_nm:.1f}\\,\\text{{nm}}}}"
