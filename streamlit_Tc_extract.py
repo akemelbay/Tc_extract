@@ -453,9 +453,11 @@ if uploaded_file is not None:
         df = clean_channel_resistance_columns(df)
 
         if 'ADR Temp (K)' in df.columns and 'Temperature (K)' in df.columns:
+            #Use data ADR Temp below 14K
             condition = df['Temperature (K)'] > 14
             df.loc[~condition, 'Temperature (K)'] = df['ADR Temp (K)']
 
+            #Use data above 0.1 K only -- needed to avoid spikes when BRT measurement starts (at ~90 mK)
             df = df[df['Temperature (K)'] >= 0.1]
         
         st.session_state['df'] = df
