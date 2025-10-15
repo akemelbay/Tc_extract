@@ -227,6 +227,32 @@ yaxis_style = dict(
     title_font=font_dict
 )
 
+def clean_channel_resistance_columns(df):
+    # Define channel names with and without the ' Ohm' suffix
+    channels = ['Channel 1 Resistance', 'Channel 2 Resistance', 'Channel 3 Resistance']
+    channels_with_ohm = [f"{channel} (Ohm)" for channel in channels]
+    
+    # Check for conflicts and create a list to rename columns
+    for channel, channel_ohm in zip(channels, channels_with_ohm):
+        has_channel = channel in df.columns
+        has_channel_ohm = channel_ohm in df.columns
+        
+        if has_channel and has_channel_ohm:
+            print(f"Warning: Both '{channel}' and '{channel_ohm}' exist. One will be removed.")
+            # You can decide which one to keep or handle it as you prefer
+            # For example: let's remove the (Ohm) version
+            df.drop(columns=channel_ohm, inplace=True)
+        
+        if has_channel_ohm:
+            # Rename column by removing the ' (Ohm)' part
+            df.rename(columns={channel_ohm: channel}, inplace=True)
+        
+        if not has_channel and not has_channel_ohm:
+            # If neither exists, create the column
+            df[channel] = pd.Series(dtype='float64')  # Assuming resistance is float
+
+    return df
+
 def process_and_plot(df,channel_list_from_fileName):
     # Ensure required columns are present
     required_columns = [
@@ -342,7 +368,7 @@ def plot_data_vs_temperature(df,channel_list_from_fileName):
                 buttons=[
                     dict(label="300 K", method="relayout", args=[{"xaxis.range": (df['Temperature (K)'].min(), 300)}]),
                     dict(label="20 K", method="relayout", args=[{"xaxis.range": (df['Temperature (K)'].min(), 20)}]),
-                    dict(label="15 K", method="relayout", args=[{"xaxis.range": (df['Temperature (K)'].min(), 15)}]),
+                    dict(label="1.7 K", method="relayout", args=[{"xaxis.range": (df['Temperature (K)'].min(), 1.7)}]),
                 ]
             )
         ]
@@ -424,11 +450,19 @@ if uploaded_file is not None:
                 break
         import io
         df = pd.read_csv(io.StringIO('\n'.join(lines[data_start:])))
+        df = clean_channel_resistance_columns(df)
+
+        if 'ADR Temp (K)' in df.columns and 'Temperature (K)' in df.columns:
+            condition = df['Temperature (K)'] > 14
+            df.loc[~condition, 'Temperature (K)'] = df['ADR Temp (K)']
+
+            df = df[df['Temperature (K)'] >= 0.1]
+        
         st.session_state['df'] = df
         st.session_state['file_name'] = uploaded_file.name
     else:
         df = st.session_state['df']
-
+    
     process_and_plot(df,channel_list_from_fileName)
 
     
